@@ -27,10 +27,10 @@ if (NOT falloc_FOUND)
 endif()
 include_directories(${falloc_INCLUDE_DIR})
 
-add_executable(${PROJECT_NAME}
+
+add_library(${PROJECT_NAME} SHARED
     include/pruv_http/http_loop.hpp
     include/pruv_http/url_fsm.hpp
-    src/main.cpp
     src/http_loop.cpp
     src/http_loop_no_rtti.cpp
     src/url_fsm.cpp
@@ -39,12 +39,26 @@ add_executable(${PROJECT_NAME}
 set_source_files_properties(
     src/http_loop_no_rtti.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 
+
+add_executable(${PROJECT_NAME}_worker
+    src/main.cpp
+)
+
+
 target_link_libraries(${PROJECT_NAME} ${HTTP_PARSER_LIBRARY})
 target_link_libraries(${PROJECT_NAME} rt)
 target_link_libraries(${PROJECT_NAME} ${SYSTEMD_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} ${pruv_LIBRARY})
 target_link_libraries(${PROJECT_NAME} ${falloc_LIBRARY})
 
+target_link_libraries(${PROJECT_NAME}_worker ${pruv_LIBRARY})
+target_link_libraries(${PROJECT_NAME}_worker ${PROJECT_NAME})
+add_dependencies(${PROJECT_NAME}_worker ${PROJECT_NAME})
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+
+set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_STANDARD_REQUIRED ON)
