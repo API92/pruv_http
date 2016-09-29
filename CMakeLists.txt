@@ -1,0 +1,50 @@
+project(pruv_http)
+cmake_minimum_required(VERSION 2.8)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
+
+include_directories(include)
+
+if (NOT Systemd_FOUND)
+    find_package(Systemd REQUIRED)
+endif()
+include_directories(${SYSTEMD_INCLUDE_DIRS})
+
+if (NOT HttpParser_FOUND)
+    find_package(HttpParser REQUIRED)
+endif()
+include_directories(${HTTP_PARSER_INCLUDE_DIR})
+
+if (NOT pruv_FOUND)
+    find_package(pruv REQUIRED)
+endif()
+include_directories(${pruv_INCLUDE_DIR})
+
+if (NOT falloc_FOUND)
+    find_package(falloc REQUIRED)
+endif()
+include_directories(${falloc_INCLUDE_DIR})
+
+add_executable(${PROJECT_NAME}
+    include/pruv_http/http_loop.hpp
+    include/pruv_http/url_fsm.hpp
+    src/main.cpp
+    src/http_loop.cpp
+    src/http_loop_no_rtti.cpp
+    src/url_fsm.cpp
+)
+
+set_source_files_properties(
+    src/http_loop_no_rtti.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+
+target_link_libraries(${PROJECT_NAME} ${HTTP_PARSER_LIBRARY})
+target_link_libraries(${PROJECT_NAME} rt)
+target_link_libraries(${PROJECT_NAME} ${SYSTEMD_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${pruv_LIBRARY})
+target_link_libraries(${PROJECT_NAME} ${falloc_LIBRARY})
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
