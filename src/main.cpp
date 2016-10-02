@@ -7,7 +7,9 @@
 #include <cstdlib>
 #include <memory>
 
+#include <dlfcn.h>
 #include <getopt.h>
+#include <glob.h>
 
 #include <pruv/log.hpp>
 
@@ -18,13 +20,13 @@ int parse_int_arg(const char *s, const char *optname)
     char *endptr = nullptr;
     unsigned long res = strtol(s, &endptr, 0);
     if ((res == ULONG_MAX && errno == ERANGE) || res > INT_MAX) {
-        pruv::log(LOG_EMERG, "Options \"%s\" value \"%s\" is out of range",
+        pruv_log(LOG_EMERG, "Options \"%s\" value \"%s\" is out of range",
                 optname, s);
         exit(EXIT_FAILURE);
     }
 
     if (*endptr) {
-        pruv::log(LOG_EMERG, "Options \"%s\" has non unsigned integer value",
+        pruv_log(LOG_EMERG, "Options \"%s\" has non unsigned integer value",
                 optname);
         exit(EXIT_FAILURE);
     }
@@ -32,53 +34,80 @@ int parse_int_arg(const char *s, const char *optname)
     return (int)res;
 }
 
-void register_handlers(pruv::http::http_loop &loop)
+struct dyn_lib_handle {
+    void *handle;
+
+    dyn_lib_handle(void *handle) : handle(handle) {}
+    ~dyn_lib_handle()
+    {
+        if (!handle)
+            return;
+        dlerror();
+        if (dlclose(handle)) {
+            char const *error = dlerror();
+            pruv_log(LOG_ERR, "dlclose error: %s.", error ? error : "");
+        }
+    }
+
+    dyn_lib_handle(dyn_lib_handle &&rhs) : handle(rhs.handle)
+    {
+        rhs.handle = nullptr;
+    }
+
+    dyn_lib_handle(dyn_lib_handle const &) = delete;
+    void operator = (dyn_lib_handle const &) = delete;
+};
+
+void load_handlers(char const *pattern, pruv::http::http_loop &loop,
+        std::vector<dyn_lib_handle> &result)
 {
-    using pruv::http::http_loop;
-    using pruv::http::url_fsm;
-    loop.register_handler(url_fsm::path("/hello/world/"),
-        [](http_loop &h) {
-            h.start_response("HTTP/1.1", "200 OK");
-            h.write_header("Content-Type", "html/text; charset=utf-8");
-            h.complete_headers();
-            char const body[] = u8"Hello world!!!\r\n";
-            h.write_body(body, sizeof(body) - 1);
-            h.complete_body();
-            return 0;
-        });
+    struct scoped_glob_t : glob_t {
+        ~scoped_glob_t() {
+            globfree(this);
+        }
+    };
+    scoped_glob_t globbuf;
 
-    loop.register_handler(url_fsm::path("/hi/mir/"),
-        [](http_loop &h) {
-            h.start_response("HTTP/1.1", "200 OK");
-            h.write_header("Content-Type", "html/text; charset=utf-8");
-            h.complete_headers();
-            char const body[] = u8"Hi mir!!!\r\n";
-            h.write_body(body, sizeof(body) - 1);
-            h.complete_body();
-            return 0;
-        });
+    if (int r = glob(pattern, 0, nullptr, &globbuf)) {
+        char const *code = "Unknown code";
+        if (r == GLOB_NOSPACE)
+            code = "GLOB_NOSPACE";
+        else if (r == GLOB_ABORTED)
+            code = "GLOB_ABORTED";
+        else if (r == GLOB_NOMATCH)
+            code = "GLOB_NOMATCH";
+        pruv_log(LOG_ERR, "Can't find handlers. glob returned %s.", code);
+    }
 
-    loop.register_handler(std::move(
-        url_fsm::path("/privet/mir/").add(url_fsm::TILL_SLASH).add("/")),
-        [](http_loop &h,
-           std::vector<std::pair<char const *, char const *>> &args) {
-            h.start_response("HTTP/1.1", "200 OK");
-            h.write_header("Content-Type", "html/text; charset=utf-8");
-            h.complete_headers();
-            char const body[] = u8"Privet mir ";
-            h.write_body(body, sizeof(body) - 1);
-            h.write_body(args.at(0).first, args.at(0).second - args.at(0).first);
-            h.write_body(u8"!!!\r\n", 5);
-            h.complete_body();
-            return 0;
-        });
+    for (char **path = globbuf.gl_pathv; *path; ++path) {
+        dyn_lib_handle h(dlopen(*path, RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE));
+        if (!h.handle) {
+            pruv_log(LOG_ERR, "Can't load %s due to error %s.",
+                    *path, dlerror());
+            continue;
+        }
+
+        void (*registrator)(pruv::http::http_loop &) =
+            reinterpret_cast<void (*)(pruv::http::http_loop &)>(dlsym(h.handle,
+                    "_Z27register_pruv_http_handlersRN4pruv4http9http_loopE"));
+        if (registrator) {
+            pruv_log(LOG_INFO, "Founded http handlers registrator in %s.",
+                    *path);
+            registrator(loop);
+            result.emplace_back(std::move(h));
+        }
+    }
 }
 
 int main(int argc, char * const *argv)
 {
     int log_level = LOG_INFO;
+    char const *handlers_pattern = "*.so";
+    char const *url_prefix = "";
     const option opts[] = {
         {"loglevel", required_argument, &log_level, LOG_INFO},
+        {"handlers-pattern", required_argument, NULL, 1},
+        {"url-prefix", required_argument, NULL, 2},
         {0, 0, nullptr, 0}
     };
 
@@ -87,10 +116,16 @@ int main(int argc, char * const *argv)
         int c = getopt_long(argc, argv, "", opts, &opt_idx);
         if (c == -1)
             break;
-        if (c == 0 && optarg)
-            *opts[opt_idx].flag = parse_int_arg(optarg, opts[opt_idx].name);
+        if (c == 0) {
+            if (optarg)
+                *opts[opt_idx].flag = parse_int_arg(optarg, opts[opt_idx].name);
+        }
+        else if (c == 1)
+            handlers_pattern = optarg;
+        else if (c == 2)
+            url_prefix = optarg;
         else if (c != '?') {
-            pruv::log(LOG_EMERG, "Unknown option");
+            pruv_log(LOG_EMERG, "Unknown option");
             return EXIT_FAILURE;
         }
     }
@@ -99,12 +134,13 @@ int main(int argc, char * const *argv)
     using pruv::http::http_loop;
     if (int r = http_loop::setup())
         return r;
-    std::unique_ptr<http_loop> loop(new (std::nothrow) http_loop("/prefix"));
+    std::unique_ptr<http_loop> loop(new (std::nothrow) http_loop(url_prefix));
     if (!loop) {
-        pruv::log(LOG_ERR, "No memory for worker loop object.");
+        pruv_log(LOG_ERR, "No memory for worker loop object.");
         return EXIT_FAILURE;
     }
 
-    register_handlers(*loop);
+    std::vector<dyn_lib_handle> handles;
+    load_handlers(handlers_pattern, *loop, handles);
     return loop->run();
 }

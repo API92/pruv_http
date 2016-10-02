@@ -44,6 +44,10 @@ add_executable(${PROJECT_NAME}_worker
     src/main.cpp
 )
 
+add_library(${PROJECT_NAME}_sample_handlers SHARED
+    src/sample_handlers.cpp
+)
+
 
 target_link_libraries(${PROJECT_NAME} ${HTTP_PARSER_LIBRARY})
 target_link_libraries(${PROJECT_NAME} rt)
@@ -51,9 +55,13 @@ target_link_libraries(${PROJECT_NAME} ${SYSTEMD_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} ${pruv_LIBRARY})
 target_link_libraries(${PROJECT_NAME} ${falloc_LIBRARY})
 
+target_link_libraries(${PROJECT_NAME}_worker dl)
 target_link_libraries(${PROJECT_NAME}_worker ${pruv_LIBRARY})
 target_link_libraries(${PROJECT_NAME}_worker ${PROJECT_NAME})
 add_dependencies(${PROJECT_NAME}_worker ${PROJECT_NAME})
+
+target_link_libraries(${PROJECT_NAME}_sample_handlers ${PROJECT_NAME})
+add_dependencies(${PROJECT_NAME}_sample_handlers ${PROJECT_NAME})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
@@ -62,3 +70,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_STANDARD_REQUIRED ON)
+
+set_property(TARGET ${PROJECT_NAME}_sample_handlers PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET ${PROJECT_NAME}_sample_handlers PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${PROJECT_NAME}_sample_handlers PROPERTY CXX_STANDARD_REQUIRED ON)
