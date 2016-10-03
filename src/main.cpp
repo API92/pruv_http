@@ -132,7 +132,7 @@ int main(int argc, char * const *argv)
     pruv::openlog(pruv::log_type::JOURNALD, log_level);
 
     using pruv::http::http_loop;
-    if (int r = http_loop::setup())
+    if (int r = http_loop::setup(argc, argv))
         return r;
     std::unique_ptr<http_loop> loop(new (std::nothrow) http_loop(url_prefix));
     if (!loop) {
