@@ -29,6 +29,22 @@ void http_loop::register_handler(url_fsm::path &&p, handler_t &&f)
             });
 }
 
+void http_loop::register_handler(url_fsm::path const &p,
+        args_handler_t const &f)
+{
+    handlers_holder.emplace_front(p, f);
+    url_routing.add(handlers_holder.front().first, &handlers_holder.front());
+}
+
+void http_loop::register_handler(url_fsm::path const &p, handler_t const &f)
+{
+    register_handler(p,
+            [f](http_loop &loop,
+                std::vector<std::pair<char const *, char const *>> &) {
+                return f(loop);
+            });
+}
+
 int http_loop::do_response_impl() noexcept
 {
     try {

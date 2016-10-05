@@ -68,6 +68,8 @@ public:
 
     void register_handler(url_fsm::path &&p, args_handler_t &&f);
     void register_handler(url_fsm::path &&p, handler_t &&f);
+    void register_handler(url_fsm::path const &p, args_handler_t const &f);
+    void register_handler(url_fsm::path const &p, handler_t const &f);
 
 protected:
     virtual int do_response() noexcept override;

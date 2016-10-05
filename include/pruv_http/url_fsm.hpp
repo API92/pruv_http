@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <forward_list>
 #include <memory>
 #include <vector>
 
@@ -26,7 +25,8 @@ public:
     public:
         ~path();
         path();
-        path(path &&other);
+        path(path &&);
+        path(path const &);
         path(char const *s);
 
         path & add(char const *s);
@@ -40,8 +40,7 @@ public:
         template<typename T>
         inline path & add_impl(T &&arg);
 
-        std::forward_list<segment> chain;
-        std::forward_list<segment>::iterator last;
+        std::vector<segment> chain;
 
         friend url_fsm;
     };

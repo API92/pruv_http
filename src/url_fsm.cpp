@@ -54,25 +54,23 @@ struct url_fsm::node {
 ///
 
 
-url_fsm::path::path() : last(chain.begin()) {}
+url_fsm::path::path() {}
 
 url_fsm::path::~path() {}
 
-url_fsm::path::path(path &&other) :
-    chain(std::move(other.chain)), last(std::move(other.last))
-{
-}
+url_fsm::path::path(path &&other) : chain(std::move(other.chain)) {}
+
+url_fsm::path::path(path const &other) : chain(other.chain) {}
 
 url_fsm::path::path(char const *s)
 {
-    chain.emplace_front(s);
-    last = chain.begin();
+    chain.emplace_back(s);
 }
 
 template<typename T>
 url_fsm::path & url_fsm::path::add_impl(T &&arg)
 {
-    last = chain.emplace_after(last, std::forward<T &&>(arg));
+    chain.emplace_back(std::forward<T &&>(arg));
     return *this;
 }
 
