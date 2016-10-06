@@ -20,8 +20,17 @@ class http_loop : public http_worker {
     typedef pruv::http_worker parent;
 
 public:
-    struct response_send_error : std::runtime_error {
-        using runtime_error::runtime_error;
+    class response_send_error : public std::exception {
+    public:
+        response_send_error(char const *s);
+        ~response_send_error();
+        response_send_error(response_send_error const &other);
+        response_send_error(response_send_error &&other) noexcept;
+        response_send_error & operator = (response_send_error const &other);
+        response_send_error & operator = (response_send_error &&other) noexcept;
+
+    private:
+        char *s;
     };
 
     http_loop(char const *url_prefix);
@@ -53,6 +62,8 @@ public:
             return;
         throw response_send_error("write_body error");
     }
+
+    void respond_empty(char const *status_line);
 
     void complete_body()
     {

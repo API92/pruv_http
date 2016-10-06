@@ -11,6 +11,60 @@
 namespace pruv {
 namespace http {
 
+http_loop::response_send_error::response_send_error(char const *s) :
+    s(new char [strlen(s) + 1])
+{
+    strcpy(this->s, s);
+}
+
+http_loop::response_send_error::~response_send_error()
+{
+    delete[] s;
+}
+
+http_loop::response_send_error::response_send_error(
+        response_send_error const &other)
+{
+    if (other.s)
+        response_send_error(other.s);
+    else
+        s = nullptr;
+}
+
+http_loop::response_send_error::response_send_error(response_send_error &&other
+        ) noexcept
+    : s(other.s)
+{
+    other.s = nullptr;
+}
+
+http_loop::response_send_error & http_loop::response_send_error::operator = (
+        response_send_error const &other)
+{
+    if (this == &other)
+        return *this;
+
+    delete[] s;
+    s = nullptr;
+    if (other.s) {
+        s = new char [strlen(other.s) + 1];
+        strcpy(s, other.s);
+    }
+    return *this;
+}
+
+http_loop::response_send_error & http_loop::response_send_error::operator = (
+        response_send_error &&other) noexcept
+{
+    if (this == &other)
+        return *this;
+
+    delete[] s;
+    s = other.s;
+    other.s = nullptr;
+    return *this;
+}
+
 http_loop::http_loop(char const *url_prefix) :
     url_prefix(url_prefix), url_prefix_len(strlen(url_prefix)) {}
 
@@ -45,20 +99,35 @@ void http_loop::register_handler(url_fsm::path const &p, handler_t const &f)
             });
 }
 
+void http_loop::respond_empty(char const *status_line)
+{
+    start_response(u8"HTTP/1.1", status_line);
+    if (!keep_alive())
+        write_header(u8"Connection", u8"close");
+    complete_headers();
+    complete_body();
+}
+
 int http_loop::do_response_impl() noexcept
 {
     try {
-        if (strncmp(url_prefix, url(), url_prefix_len))
-            return send_empty_response("404 Not Found");
+        if (strncmp(url_prefix, url(), url_prefix_len)) {
+            respond_empty("404 Not Found");
+            return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
+        }
 
         url_routing.go(url() + url_prefix_len, search_handler_result);
-        if (search_handler_result.empty())
-            return send_empty_response("404 Not Found");
+        if (search_handler_result.empty()) {
+            respond_empty("404 Not Found");
+            return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
+        }
         auto *hp = reinterpret_cast<decltype(handlers_holder)::value_type *>(
                 search_handler_result.front());
         search_handler_result.clear();
-        if (!hp->second)
-            return send_empty_response("404 Not Found");
+        if (!hp->second) {
+            respond_empty("404 Not Found");
+            return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
+        }
 
         url_wildcards.clear();
         hp->first.match(url() + url_prefix_len, &url_wildcards);
