@@ -35,6 +35,13 @@ public:
 
     http_loop(char const *url_prefix);
 
+    shmem_buffer & response_buf()
+    {
+        // Not null in handler because
+        // send_last_response() called only after handler.
+        return *get_response_buf();
+    }
+
     void start_response(char const *version, char const *status_line)
     {
         if (parent::start_response(version, status_line))

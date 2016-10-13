@@ -4,13 +4,15 @@
 
 #include <pruv_http/http_loop.hpp>
 
+#include <pruv_http/status_codes.hpp>
+
 void register_pruv_http_handlers(pruv::http::http_loop &loop)
 {
     using pruv::http::http_loop;
     using pruv::http::url_fsm;
     loop.register_handler(url_fsm::path("/hello/world/"),
         [](http_loop &h) {
-            h.start_response("HTTP/1.1", "200 OK");
+            h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
             if (!h.keep_alive())
                 h.write_header("Connection", "close");
@@ -23,7 +25,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
 
     loop.register_handler(url_fsm::path("/hi/mir/"),
         [](http_loop &h) {
-            h.start_response("HTTP/1.1", "200 OK");
+            h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
             if (!h.keep_alive())
                 h.write_header("Connection", "close");
@@ -38,7 +40,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
         url_fsm::path("/privet/mir/").add(url_fsm::TILL_SLASH).add("/")),
         [](http_loop &h,
            std::vector<std::pair<char const *, char const *>> &args) {
-            h.start_response("HTTP/1.1", "200 OK");
+            h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
             if (!h.keep_alive())
                 h.write_header("Connection", "close");

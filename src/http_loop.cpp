@@ -8,6 +8,8 @@
 
 #include <pruv/log.hpp>
 
+#include <pruv_http/status_codes.hpp>
+
 namespace pruv {
 namespace http {
 
@@ -112,20 +114,20 @@ int http_loop::do_response_impl() noexcept
 {
     try {
         if (strncmp(url_prefix, url(), url_prefix_len)) {
-            respond_empty("404 Not Found");
+            respond_empty(status_404);
             return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
         url_routing.go(url() + url_prefix_len, search_handler_result);
         if (search_handler_result.empty()) {
-            respond_empty("404 Not Found");
+            respond_empty(status_404);
             return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
         }
         auto *hp = reinterpret_cast<decltype(handlers_holder)::value_type *>(
                 search_handler_result.front());
         search_handler_result.clear();
         if (!hp->second) {
-            respond_empty("404 Not Found");
+            respond_empty(status_404);
             return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 

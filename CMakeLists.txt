@@ -30,9 +30,11 @@ include_directories(${falloc_INCLUDE_DIR})
 
 add_library(${PROJECT_NAME} SHARED
     include/pruv_http/http_loop.hpp
+    include/pruv_http/status_codes.hpp
     include/pruv_http/url_fsm.hpp
     src/http_loop.cpp
     src/http_loop_no_rtti.cpp
+    src/status_codes.cpp
     src/url_fsm.cpp
 )
 
