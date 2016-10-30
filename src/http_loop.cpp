@@ -9,6 +9,7 @@
 #include <pruv/log.hpp>
 
 #include <pruv_http/status_codes.hpp>
+#include <pruv_http/url_coding.hpp>
 
 namespace pruv {
 namespace http {
@@ -67,20 +68,17 @@ http_loop::response_send_error & http_loop::response_send_error::operator = (
     return *this;
 }
 
-http_loop::http_loop(char const *url_prefix) :
-    url_prefix(url_prefix), url_prefix_len(strlen(url_prefix)) {}
-
 void http_loop::register_handler(url_fsm::path &&p, args_handler_t &&f)
 {
-    handlers_holder.emplace_front(std::move(p), std::move(f));
-    url_routing.add(handlers_holder.front().first, &handlers_holder.front());
+    _handlers_holder.emplace_front(std::move(p), std::move(f));
+    _url_routing.add(_handlers_holder.front().first, &_handlers_holder.front());
 }
 
 void http_loop::register_handler(url_fsm::path &&p, handler_t &&f)
 {
     register_handler(std::move(p),
             [ff = std::move(f)](http_loop &loop,
-                std::vector<std::pair<char const *, char const *>> &) {
+                    std::vector<std::experimental::string_view> &) {
                 return ff(loop);
             });
 }
@@ -88,15 +86,15 @@ void http_loop::register_handler(url_fsm::path &&p, handler_t &&f)
 void http_loop::register_handler(url_fsm::path const &p,
         args_handler_t const &f)
 {
-    handlers_holder.emplace_front(p, f);
-    url_routing.add(handlers_holder.front().first, &handlers_holder.front());
+    _handlers_holder.emplace_front(p, f);
+    _url_routing.add(_handlers_holder.front().first, &_handlers_holder.front());
 }
 
 void http_loop::register_handler(url_fsm::path const &p, handler_t const &f)
 {
     register_handler(p,
             [f](http_loop &loop,
-                std::vector<std::pair<char const *, char const *>> &) {
+                    std::vector<std::experimental::string_view> &) {
                 return f(loop);
             });
 }
@@ -113,17 +111,39 @@ void http_loop::respond_empty(char const *status_line)
 int http_loop::do_response_impl() noexcept
 {
     try {
-        if (strncmp(url_prefix, url(), url_prefix_len)) {
-            respond_empty(status_404);
+        http_parser_url u;
+        http_parser_url_init(&u);
+        int is_connect = method() == HTTP_CONNECT;
+        if (http_parser_parse_url(url(), strlen(url()), is_connect, &u) != 0 ||
+                !(u.field_set & (1 << UF_PATH))) {
+            respond_empty(status_400);
             return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
-        url_routing.go(url() + url_prefix_len, search_handler_result);
+        _url_path = url() + u.field_data[UF_PATH].off;
+        url()[url() - _url_path + u.field_data[UF_PATH].len] = 0;
+
+        _url_query.clear();
+        if (u.field_set & (1 << UF_QUERY)) {
+            char *url_query = url() + u.field_data[UF_QUERY].off;
+            char *url_query_end = url_query + u.field_data[UF_QUERY].len;
+            *url_query_end = 0;
+            parse_url_query(url_query);
+        }
+
+        if (u.field_set & (1 << UF_FRAGMENT)) {
+            _url_fragment = url() + u.field_data[UF_FRAGMENT].off;
+            url()[url() - _url_fragment + u.field_data[UF_FRAGMENT].len] = 0;
+        }
+        else
+            _url_fragment = "";
+
+        _url_routing.go(url_path(), search_handler_result);
         if (search_handler_result.empty()) {
             respond_empty(status_404);
             return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
         }
-        auto *hp = reinterpret_cast<decltype(handlers_holder)::value_type *>(
+        auto *hp = reinterpret_cast<decltype(_handlers_holder)::value_type *>(
                 search_handler_result.front());
         search_handler_result.clear();
         if (!hp->second) {
@@ -131,10 +151,10 @@ int http_loop::do_response_impl() noexcept
             return send_last_response() ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
-        url_wildcards.clear();
-        hp->first.match(url() + url_prefix_len, &url_wildcards);
+        _url_wildcards.clear();
+        hp->first.match(url_path(), &_url_wildcards);
 
-        if (int ret = hp->second(*this, url_wildcards))
+        if (int ret = hp->second(*this, _url_wildcards))
             return ret;
 
         if (!send_last_response())
@@ -153,6 +173,50 @@ int http_loop::do_response_impl() noexcept
     catch (...) {
         pruv_log(LOG_EMERG, "Unknown error.");
         return EXIT_FAILURE;
+    }
+}
+
+void http_loop::parse_url_query(char *query)
+{
+    while (*query) {
+        char *key = query;
+        size_t key_len = 0;
+        char *value = nullptr;
+        size_t value_len = 0;
+        for (;;) {
+            char c = *query;
+            if (!c || c == '&') {
+                if (value)
+                    value_len = query - value;
+                else
+                    key_len = query - key;
+
+                if (c)
+                    ++query;
+                break;
+            }
+
+            if (c == '=') {
+                key_len = query - key;
+                value = ++query;
+                continue;
+            }
+
+            ++query;
+        }
+
+        if (key) {
+            key_len = url_decode(key, key_len) - key;
+            key[key_len] = 0;
+        }
+
+        if (value) {
+            value_len = url_decode(value, value_len) - value;
+            value[value_len] = 0;
+        }
+
+        _url_query[std::experimental::string_view(key, key_len)] =
+                std::experimental::string_view(value, value_len);
     }
 }
 

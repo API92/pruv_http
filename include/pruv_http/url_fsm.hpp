@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <experimental/string_view>
 #include <memory>
 #include <vector>
 
@@ -34,7 +35,7 @@ public:
 
 
         char const * match(char const *s,
-                std::vector<std::pair<char const *, char const *>> *w) const;
+                std::vector<std::experimental::string_view> *w) const;
 
     private:
         template<typename T>

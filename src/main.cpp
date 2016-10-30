@@ -103,11 +103,9 @@ int main(int argc, char * const *argv)
 {
     int log_level = LOG_INFO;
     char const *handlers_pattern = "*.so";
-    char const *url_prefix = "";
     const option opts[] = {
         {"loglevel", required_argument, &log_level, LOG_INFO},
         {"handlers-pattern", required_argument, NULL, 1},
-        {"url-prefix", required_argument, NULL, 2},
         {0, 0, nullptr, 0}
     };
 
@@ -122,8 +120,6 @@ int main(int argc, char * const *argv)
         }
         else if (c == 1)
             handlers_pattern = optarg;
-        else if (c == 2)
-            url_prefix = optarg;
         else if (c != '?') {
             pruv_log(LOG_EMERG, "Unknown option");
             return EXIT_FAILURE;
@@ -134,7 +130,7 @@ int main(int argc, char * const *argv)
     using pruv::http::http_loop;
     if (int r = http_loop::setup(argc, argv))
         return r;
-    std::unique_ptr<http_loop> loop(new (std::nothrow) http_loop(url_prefix));
+    std::unique_ptr<http_loop> loop(new (std::nothrow) http_loop);
     if (!loop) {
         pruv_log(LOG_ERR, "No memory for worker loop object.");
         return EXIT_FAILURE;

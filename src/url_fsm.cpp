@@ -14,16 +14,6 @@
 namespace pruv {
 namespace http {
 
-namespace {
-
-inline bool isstop(char c)
-{
-    return !c || c == '?' || c == '#';
-}
-
-} // namespace
-
-
 ///
 /// url_fsm::segment
 ///
@@ -85,12 +75,12 @@ url_fsm::path & url_fsm::path::add(segment_type t)
 }
 
 char const * url_fsm::path::match(char const *s,
-        std::vector<std::pair<char const *, char const *>> *w) const
+        std::vector<std::experimental::string_view> *w) const
 {
     for (segment const &seg : chain)
         if (seg.type == STRING) {
             char const *m = seg.l;
-            while (m != seg.r && !isstop(*s) && *m == *s) {
+            while (m != seg.r && *s && *m == *s) {
                 ++m;
                 ++s;
             }
@@ -99,10 +89,10 @@ char const * url_fsm::path::match(char const *s,
         }
         else {
             char const *l = s;
-            while (!isstop(*s) && *s != '/')
+            while (*s && *s != '/')
                 ++s;
             if (w)
-                w->emplace_back(l, s);
+                w->emplace_back(l, s - l);
             if (*s != '/')
                 return s;
         }
@@ -197,7 +187,7 @@ void url_fsm::go(char const *s, std::vector<void *> &result) const
             q.push_back(to);
     };
 
-    for (; !isstop(*s); ++s) {
+    for (; *s; ++s) {
         used.clear();
         for (size_t qsz = q.size(); qsz--;) {
             pos cur = q.front();

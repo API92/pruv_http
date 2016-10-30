@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include <stdexcept>
+#include <experimental/string_view>
 #include <forward_list>
 #include <functional>
+#include <stdexcept>
+#include <unordered_map>
 #include <utility>
 
 #include <pruv/http_worker.hpp>
@@ -33,14 +35,16 @@ public:
         char *s;
     };
 
-    http_loop(char const *url_prefix);
-
     shmem_buffer & response_buf()
     {
         // Not null in handler because
         // send_last_response() called only after handler.
         return *get_response_buf();
     }
+
+    char const * url_path() const { return _url_path; }
+    char const * url_fragment() const { return _url_fragment; }
+    auto & url_query() const { return _url_query; }
 
     void start_response(char const *version, char const *status_line)
     {
@@ -80,7 +84,7 @@ public:
     }
 
     typedef std::function<int(http_loop &,
-            std::vector<std::pair<char const *, char const *>> &)>
+            std::vector<std::experimental::string_view> &)>
         args_handler_t;
     typedef std::function<int(http_loop &)> handler_t;
 
@@ -94,13 +98,19 @@ protected:
 
 private:
     int do_response_impl() noexcept;
+    using parent::url;
+    void parse_url_query(char *query);
 
-    char const *url_prefix;
-    size_t url_prefix_len;
-    url_fsm url_routing;
-    std::forward_list<std::pair<url_fsm::path, args_handler_t>> handlers_holder;
+    url_fsm _url_routing;
+    char const *_url_path;
+    char const *_url_fragment;
+    std::unordered_map<
+        std::experimental::string_view,
+        std::experimental::string_view> _url_query;
+    std::forward_list<std::pair<url_fsm::path, args_handler_t>>
+            _handlers_holder;
     std::vector<void *> search_handler_result;
-    std::vector<std::pair<char const *, char const *>> url_wildcards;
+    std::vector<std::experimental::string_view> _url_wildcards;
 };
 
 } // namespace http

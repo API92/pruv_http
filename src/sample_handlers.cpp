@@ -39,7 +39,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
     loop.register_handler(std::move(
         url_fsm::path("/privet/mir/").add(url_fsm::TILL_SLASH).add("/")),
         [](http_loop &h,
-           std::vector<std::pair<char const *, char const *>> &args) {
+           std::vector<std::experimental::string_view> &args) {
             h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
             if (!h.keep_alive())
@@ -47,7 +47,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
             h.complete_headers();
             char const body[] = u8"Privet mir ";
             h.write_body(body, sizeof(body) - 1);
-            h.write_body(args.at(0).first, args.at(0).second - args.at(0).first);
+            h.write_body(args.at(0).data(), args.at(0).size());
             h.write_body(u8"!!!\r\n", 5);
             h.complete_body();
             return 0;
