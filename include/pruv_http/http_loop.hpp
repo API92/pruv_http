@@ -83,6 +83,8 @@ public:
         throw response_send_error("complete_body error");
     }
 
+    std::experimental::string_view cookie(char const *name) const;
+
     typedef std::function<int(http_loop &,
             std::vector<std::experimental::string_view> &)>
         args_handler_t;

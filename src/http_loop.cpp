@@ -4,7 +4,10 @@
 
 #include <pruv_http/http_loop.hpp>
 
+#include <algorithm>
 #include <cstring>
+
+#include <strings.h>
 
 #include <pruv/log.hpp>
 
@@ -218,6 +221,45 @@ void http_loop::parse_url_query(char *query)
         _url_query[std::experimental::string_view(key, key_len)] =
                 std::experimental::string_view(value, value_len);
     }
+}
+
+std::experimental::string_view http_loop::cookie(char const *name) const
+{
+    std::experimental::string_view h(nullptr, 0);
+    for (header const &ih : headers())
+        if (strcasecmp(ih.field, "Cookie") == 0) {
+            h = ih.value;
+            break;
+        }
+
+    if (!h.data())
+        return h;
+
+    auto trim = [](std::experimental::string_view &s) {
+        s.remove_prefix(std::min(s.find_first_not_of(" \t"), s.size()));
+        size_t trim_right = s.find_last_not_of(" \t");
+        if (trim_right != std::experimental::string_view::npos)
+            s.remove_suffix(s.size() - trim_right - 1);
+    };
+
+    while (!h.empty()) {
+        std::experimental::string_view cname;
+        size_t eq_pos = h.find_first_of('=');
+        if (eq_pos != std::experimental::string_view::npos) {
+            cname = h.substr(0, eq_pos);
+            h.remove_prefix(cname.size() + 1);
+        }
+        auto cval = h.substr(0, h.find_first_of(';'));
+        h.remove_prefix(std::min(cval.size() + 1, h.size()));
+
+        trim(cname);
+        if (strncasecmp(cname.data(), name, cname.size()) == 0) {
+            trim(cval);
+            return cval;
+        }
+    }
+
+    return std::experimental::string_view(nullptr, 0);
 }
 
 } // namespace http
