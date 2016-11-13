@@ -109,6 +109,7 @@ int main(int argc, char * const *argv)
         {0, 0, nullptr, 0}
     };
 
+    opterr = 0;
     for (;;) {
         int opt_idx = 0;
         int c = getopt_long(argc, argv, "", opts, &opt_idx);
