@@ -39,7 +39,7 @@ public:
     {
         // Not null in handler because
         // send_last_response() called only after handler.
-        return *get_response_buf();
+        return *parent::response_buf();
     }
 
     char const * url_path() const { return _url_path; }
