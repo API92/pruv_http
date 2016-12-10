@@ -5,11 +5,13 @@
 #pragma once
 
 #include <cstddef>
+#include <experimental/string_view>
 
 namespace pruv {
 namespace http {
 
-char * url_decode(char *s, size_t len);
+bool is_url_encoded(std::experimental::string_view url);
+char * url_decode(char *url, size_t len);
 
 } // namespace http
 } // namespace pruv

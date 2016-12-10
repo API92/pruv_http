@@ -42,8 +42,11 @@ public:
         return *parent::response_buf();
     }
 
-    char const * url_path() const { return _url_path; }
-    char const * url_fragment() const { return _url_fragment; }
+    std::experimental::string_view url_path() const { return _url_path; }
+    std::experimental::string_view url_fragment() const
+    {
+        return _url_fragment;
+    }
     auto & url_query() const { return _url_query; }
 
     void start_response(char const *version, char const *status_line)
@@ -101,14 +104,15 @@ protected:
 private:
     int do_response_impl() noexcept;
     using parent::url;
-    void parse_url_query(char *query);
+    void parse_url_query(std::experimental::string_view query);
 
     url_fsm _url_routing;
-    char const *_url_path;
-    char const *_url_fragment;
+    std::experimental::string_view _url_path;
+    std::experimental::string_view _url_fragment;
     std::unordered_map<
         std::experimental::string_view,
         std::experimental::string_view> _url_query;
+    std::forward_list<std::string> _url_query_holder;
     std::forward_list<std::pair<url_fsm::path, args_handler_t>>
             _handlers_holder;
     std::vector<void *> search_handler_result;

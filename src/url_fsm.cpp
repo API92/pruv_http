@@ -74,13 +74,15 @@ url_fsm::path & url_fsm::path::add(segment_type t)
     return add_impl(t);
 }
 
-char const * url_fsm::path::match(char const *s,
+char const * url_fsm::path::match(std::experimental::string_view p,
         std::vector<std::experimental::string_view> *w) const
 {
+    char const *s = p.data();
+    char const *e = s + p.size();
     for (segment const &seg : chain)
         if (seg.type == STRING) {
             char const *m = seg.l;
-            while (m != seg.r && *s && *m == *s) {
+            while (m != seg.r && s != e && *m == *s) {
                 ++m;
                 ++s;
             }
@@ -89,11 +91,11 @@ char const * url_fsm::path::match(char const *s,
         }
         else {
             char const *l = s;
-            while (*s && *s != '/')
+            while (s != e && *s != '/')
                 ++s;
             if (w)
                 w->emplace_back(l, s - l);
-            if (*s != '/')
+            if (s == e || *s != '/')
                 return s;
         }
 
@@ -168,7 +170,8 @@ void url_fsm::add(path const &p, void *opaque)
     (*vp)->term = opaque;
 }
 
-void url_fsm::go(char const *s, std::vector<void *> &result) const
+void url_fsm::go(std::experimental::string_view p, std::vector<void *> &result)
+    const
 {
     struct pos {
         node *v;
@@ -187,7 +190,9 @@ void url_fsm::go(char const *s, std::vector<void *> &result) const
             q.push_back(to);
     };
 
-    for (; *s; ++s) {
+    char const *s = p.data();
+    char const *e = s + p.size();
+    for (; s != e; ++s) {
         used.clear();
         for (size_t qsz = q.size(); qsz--;) {
             pos cur = q.front();

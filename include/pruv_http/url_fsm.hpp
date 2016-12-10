@@ -34,7 +34,7 @@ public:
         path & add(segment_type t);
 
 
-        char const * match(char const *s,
+        char const * match(std::experimental::string_view p,
                 std::vector<std::experimental::string_view> *w) const;
 
     private:
@@ -49,7 +49,7 @@ public:
     url_fsm();
     ~url_fsm();
     void add(path const &p, void *opaque);
-    void go(char const *s, std::vector<void *> &result) const;
+    void go(std::experimental::string_view s, std::vector<void *> &res) const;
 
 private:
     struct node;

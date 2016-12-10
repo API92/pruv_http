@@ -27,14 +27,31 @@ static int8_t const * init_hex_val()
     return s;
 }
 
+static int8_t const *hx = init_hex_val();
+
 } // namespace
 
-char * url_decode(char *s, size_t len)
+bool is_url_encoded(std::experimental::string_view url)
 {
-    static int8_t const *hx = init_hex_val();
-    char *out = s;
-    char *ee = s + len;
-    char const *e = ee - 2;
+    if (url.size() < 3)
+        return false;
+    unsigned char const *s = reinterpret_cast<unsigned char const *>(url.data());
+    unsigned char const *e = s + url.size() - 2;
+    while (s < e) {
+        if (*s == '%' && *(hx + s[1]) != -1 && *(hx + s[2]) != -1)
+            return true;
+        ++s;
+    }
+
+    return false;
+}
+
+char * url_decode(char *url, size_t len)
+{
+    char *out = url;
+    unsigned char *s = (unsigned char *)url;
+    unsigned char *ee = s + len;
+    unsigned char const *e = ee - 2;
     int8_t h, l;
     while (s < e) {
         if (*s == '%' && (h = *(hx + s[1])) != -1 && (l = *(hx + s[2])) != -1) {
@@ -42,14 +59,14 @@ char * url_decode(char *s, size_t len)
             s += 3;
             continue;
         }
-        if (out != s)
+        if (out != (void *)s)
             *out = *s;
         ++out;
         ++s;
     }
 
-    if (out == s)
-        return ee;
+    if (out == (void *)s)
+        return (char *)ee;
 
     while (s != ee)
         *out++ = *s++;
