@@ -78,19 +78,3 @@ set_property(TARGET ${PROJECT_NAME}_worker PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET ${PROJECT_NAME}_sample_handlers PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET ${PROJECT_NAME}_sample_handlers PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME}_sample_handlers PROPERTY CXX_STANDARD_REQUIRED ON)
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pruv_http> ${PROJECT_SOURCE_DIR}/bin/${CMAKE_CXX_COMPILER_ID}/${CMAKE_BUILD_TYPE}/$<TARGET_FILE_NAME:pruv_http>
-    VERBATIM
-)
-
-add_custom_command(TARGET ${PROJECT_NAME}_worker POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pruv_http_worker> ${PROJECT_SOURCE_DIR}/bin/${CMAKE_CXX_COMPILER_ID}/${CMAKE_BUILD_TYPE}/$<TARGET_FILE_NAME:pruv_http_worker>
-    VERBATIM
-)
-
-add_custom_command(TARGET ${PROJECT_NAME}_sample_handlers POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pruv_http_sample_handlers>
-        ${PROJECT_SOURCE_DIR}/bin/${CMAKE_CXX_COMPILER_ID}/${CMAKE_BUILD_TYPE}/$<TARGET_FILE_NAME:pruv_http_sample_handlers>
-    VERBATIM
-)
