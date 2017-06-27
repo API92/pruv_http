@@ -31,7 +31,7 @@ static int8_t const *hx = init_hex_val();
 
 } // namespace
 
-bool is_url_encoded(std::experimental::string_view url)
+bool is_url_encoded(std::string_view url)
 {
     if (url.size() < 3)
         return false;

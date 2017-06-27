@@ -39,7 +39,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
     loop.register_handler(std::move(
         url_fsm::path("/privet/mir/").add(url_fsm::TILL_SLASH).add("/")),
         [](http_loop &h,
-           std::vector<std::experimental::string_view> &args) {
+           std::vector<std::string_view> &args) {
             h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
             if (!h.keep_alive())

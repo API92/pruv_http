@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <experimental/string_view>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 namespace pruv {
@@ -34,8 +34,8 @@ public:
         path & add(segment_type t);
 
 
-        char const * match(std::experimental::string_view p,
-                std::vector<std::experimental::string_view> *w) const;
+        char const * match(std::string_view p, std::vector<std::string_view> *w)
+            const;
 
     private:
         template<typename T>
@@ -49,7 +49,7 @@ public:
     url_fsm();
     ~url_fsm();
     void add(path const &p, void *opaque);
-    void go(std::experimental::string_view s, std::vector<void *> &res) const;
+    void go(std::string_view s, std::vector<void *> &res) const;
 
 private:
     struct node;

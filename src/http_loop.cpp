@@ -81,7 +81,7 @@ void http_loop::register_handler(url_fsm::path &&p, handler_t &&f)
 {
     register_handler(std::move(p),
             [ff = std::move(f)](http_loop &loop,
-                    std::vector<std::experimental::string_view> &) {
+                    std::vector<std::string_view> &) {
                 return ff(loop);
             });
 }
@@ -96,8 +96,7 @@ void http_loop::register_handler(url_fsm::path const &p,
 void http_loop::register_handler(url_fsm::path const &p, handler_t const &f)
 {
     register_handler(p,
-            [f](http_loop &loop,
-                    std::vector<std::experimental::string_view> &) {
+            [f](http_loop &loop, std::vector<std::string_view> &) {
                 return f(loop);
             });
 }
@@ -129,7 +128,7 @@ int http_loop::do_response_impl() noexcept
         _url_query.clear();
         _url_query_holder.clear();
         if (u.field_set & (1 << UF_QUERY)) {
-            std::experimental::string_view url_query = url().substr(
+            std::string_view url_query = url().substr(
                     u.field_data[UF_QUERY].off, u.field_data[UF_QUERY].len);
             parse_url_query(url_query);
         }
@@ -139,7 +138,7 @@ int http_loop::do_response_impl() noexcept
                 u.field_data[UF_FRAGMENT].off, u.field_data[UF_FRAGMENT].len);
         }
         else
-            _url_fragment = std::experimental::string_view();
+            _url_fragment = std::string_view();
 
         _url_routing.go(url_path(), search_handler_result);
         if (search_handler_result.empty()) {
@@ -179,13 +178,13 @@ int http_loop::do_response_impl() noexcept
     }
 }
 
-void http_loop::parse_url_query(std::experimental::string_view query)
+void http_loop::parse_url_query(std::string_view query)
 {
     while (!query.empty()) {
-        std::experimental::string_view key =
+        std::string_view key =
             query.substr(0, query.find_first_of("&="));
         query.remove_prefix(key.size());
-        std::experimental::string_view value(nullptr, 0);
+        std::string_view value(nullptr, 0);
         if (!query.empty() && query.front() == '=') {
             query.remove_prefix(1);
             value = query.substr(0, query.find_first_of('&'));
@@ -196,23 +195,23 @@ void http_loop::parse_url_query(std::experimental::string_view query)
             _url_query_holder.emplace_front(key.data(), key.size());
             char *b = &_url_query_holder.front()[0];
             char *e = url_decode(b, key.size());
-            key = std::experimental::string_view(b, e - b);
+            key = std::string_view(b, e - b);
         }
 
         if (is_url_encoded(value)) {
             _url_query_holder.emplace_front(value.data(), value.size());
             char *b = &_url_query_holder.front()[0];
             char *e = url_decode(b, value.size());
-            value = std::experimental::string_view(b, e - b);
+            value = std::string_view(b, e - b);
         }
 
         _url_query[key] = value;
     }
 }
 
-std::experimental::string_view http_loop::cookie(char const *name) const
+std::string_view http_loop::cookie(char const *name) const
 {
-    std::experimental::string_view h(nullptr, 0);
+    std::string_view h(nullptr, 0);
     for (header const &ih : headers())
         if (strncasecmp(ih.field.data(), "Cookie", ih.field.size()) == 0) {
             h = ih.value;
@@ -222,17 +221,17 @@ std::experimental::string_view http_loop::cookie(char const *name) const
     if (!h.data())
         return h;
 
-    auto trim = [](std::experimental::string_view &s) {
+    auto trim = [](std::string_view &s) {
         s.remove_prefix(std::min(s.find_first_not_of(" \t"), s.size()));
         size_t trim_right = s.find_last_not_of(" \t");
-        if (trim_right != std::experimental::string_view::npos)
+        if (trim_right != std::string_view::npos)
             s.remove_suffix(s.size() - trim_right - 1);
     };
 
     while (!h.empty()) {
-        std::experimental::string_view cname;
+        std::string_view cname;
         size_t eq_pos = h.find_first_of('=');
-        if (eq_pos != std::experimental::string_view::npos) {
+        if (eq_pos != std::string_view::npos) {
             cname = h.substr(0, eq_pos);
             h.remove_prefix(cname.size() + 1);
         }
@@ -246,7 +245,7 @@ std::experimental::string_view http_loop::cookie(char const *name) const
         }
     }
 
-    return std::experimental::string_view(nullptr, 0);
+    return std::string_view(nullptr, 0);
 }
 
 } // namespace http

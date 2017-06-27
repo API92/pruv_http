@@ -74,8 +74,8 @@ url_fsm::path & url_fsm::path::add(segment_type t)
     return add_impl(t);
 }
 
-char const * url_fsm::path::match(std::experimental::string_view p,
-        std::vector<std::experimental::string_view> *w) const
+char const * url_fsm::path::match(std::string_view p,
+        std::vector<std::string_view> *w) const
 {
     char const *s = p.data();
     char const *e = s + p.size();
@@ -170,7 +170,7 @@ void url_fsm::add(path const &p, void *opaque)
     (*vp)->term = opaque;
 }
 
-void url_fsm::go(std::experimental::string_view p, std::vector<void *> &result)
+void url_fsm::go(std::string_view p, std::vector<void *> &result)
     const
 {
     struct pos {

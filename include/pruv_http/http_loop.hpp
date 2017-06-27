@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <experimental/string_view>
 #include <forward_list>
 #include <functional>
 #include <stdexcept>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -42,8 +42,8 @@ public:
         return *parent::response_buf();
     }
 
-    std::experimental::string_view url_path() const { return _url_path; }
-    std::experimental::string_view url_fragment() const
+    std::string_view url_path() const { return _url_path; }
+    std::string_view url_fragment() const
     {
         return _url_fragment;
     }
@@ -86,10 +86,9 @@ public:
         throw response_send_error("complete_body error");
     }
 
-    std::experimental::string_view cookie(char const *name) const;
+    std::string_view cookie(char const *name) const;
 
-    typedef std::function<int(http_loop &,
-            std::vector<std::experimental::string_view> &)>
+    typedef std::function<int(http_loop &, std::vector<std::string_view> &)>
         args_handler_t;
     typedef std::function<int(http_loop &)> handler_t;
 
@@ -104,19 +103,17 @@ protected:
 private:
     int do_response_impl() noexcept;
     using parent::url;
-    void parse_url_query(std::experimental::string_view query);
+    void parse_url_query(std::string_view query);
 
     url_fsm _url_routing;
-    std::experimental::string_view _url_path;
-    std::experimental::string_view _url_fragment;
-    std::unordered_map<
-        std::experimental::string_view,
-        std::experimental::string_view> _url_query;
+    std::string_view _url_path;
+    std::string_view _url_fragment;
+    std::unordered_map<std::string_view, std::string_view> _url_query;
     std::forward_list<std::string> _url_query_holder;
     std::forward_list<std::pair<url_fsm::path, args_handler_t>>
             _handlers_holder;
     std::vector<void *> search_handler_result;
-    std::vector<std::experimental::string_view> _url_wildcards;
+    std::vector<std::string_view> _url_wildcards;
 };
 
 } // namespace http
