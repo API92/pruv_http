@@ -14,6 +14,7 @@
 #include <pruv/http_worker.hpp>
 
 #include <pruv_http/url_fsm.hpp>
+#include <pruv_http/url_coding.hpp>
 
 namespace pruv {
 namespace http {
@@ -103,13 +104,11 @@ protected:
 private:
     int do_response_impl() noexcept;
     using parent::url;
-    void parse_url_query(std::string_view query);
 
     url_fsm _url_routing;
     std::string_view _url_path;
     std::string_view _url_fragment;
-    std::unordered_map<std::string_view, std::string_view> _url_query;
-    std::forward_list<std::string> _url_query_holder;
+    urlencoded_data _url_query;
     std::forward_list<std::pair<url_fsm::path, args_handler_t>>
             _handlers_holder;
     std::vector<void *> search_handler_result;

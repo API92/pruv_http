@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -12,42 +13,37 @@ namespace pruv {
 namespace http {
 
 class url_fsm {
-public:
-    enum segment_type : char {
-        STRING,
-        TILL_SLASH
-    };
-
-private:
     struct segment;
-
 public:
     class path {
     public:
         ~path();
         path();
-        path(path &&);
         path(path const &);
+        path(path &&);
+        path & operator = (path const &);
+        path & operator = (path &&);
+
+        /// Star (*) character in pattern means "any until slash / or end".
+        /// Pattern "*smth" not supported,
+        /// only "foo*/" or "foo*/smth" or "foo*" supported
         path(char const *s);
+        path(std::string s);
+        path & then(char const *s);
+        path & then(std::string s);
 
-        path & add(char const *s);
-        path & add(segment_type t);
-
-
-        char const * match(std::string_view p, std::vector<std::string_view> *w)
-            const;
+        std::string_view
+        match(std::string_view p, std::vector<std::string_view> *w) const;
 
     private:
-        template<typename T>
-        inline path & add_impl(T &&arg);
-
-        std::vector<segment> chain;
-
+        std::vector<segment> _chain;
         friend url_fsm;
     };
 
     url_fsm();
     ~url_fsm();
+    url_fsm & operator = (url_fsm &&);
+
     void add(path const &p, void *opaque);
     void go(std::string_view s, std::vector<void *> &res) const;
 
@@ -56,7 +52,7 @@ private:
 
     node * split_segment(char const *s, std::unique_ptr<node> *vp);
 
-    std::unique_ptr<node> root;
+    std::unique_ptr<node> _root;
 };
 
 } // namespace http

@@ -10,7 +10,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
 {
     using pruv::http::http_loop;
     using pruv::http::url_fsm;
-    loop.register_handler(url_fsm::path("/hello/world/"),
+    loop.register_handler("/hello/world/",
         [](http_loop &h) {
             h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
@@ -23,7 +23,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
             return 0;
         });
 
-    loop.register_handler(url_fsm::path("/hi/mir/"),
+    loop.register_handler("/hi/mir/",
         [](http_loop &h) {
             h.start_response("HTTP/1.1", pruv::http::status_200);
             h.write_header("Content-Type", "html/text; charset=utf-8");
@@ -36,8 +36,7 @@ void register_pruv_http_handlers(pruv::http::http_loop &loop)
             return 0;
         });
 
-    loop.register_handler(std::move(
-        url_fsm::path("/privet/mir/").add(url_fsm::TILL_SLASH).add("/")),
+    loop.register_handler("/privet/mir/*/",
         [](http_loop &h,
            std::vector<std::string_view> &args) {
             h.start_response("HTTP/1.1", pruv::http::status_200);

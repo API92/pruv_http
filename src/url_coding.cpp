@@ -5,6 +5,7 @@
 #include <pruv_http/url_coding.hpp>
 
 #include <cstdint>
+#include <unordered_set>
 
 namespace pruv {
 namespace http {
@@ -72,6 +73,69 @@ char * url_decode(char *url, size_t len)
         *out++ = *s++;
 
     return out;
+}
+
+
+
+void urlencoded_data::parse(std::string_view query)
+{
+    while (!query.empty()) {
+        std::string_view key =
+            query.substr(0, query.find_first_of("&="));
+        query.remove_prefix(key.size());
+        std::string_view value(nullptr, 0);
+        if (!query.empty() && query.front() == '=') {
+            query.remove_prefix(1);
+            value = query.substr(0, query.find_first_of('&'));
+            query.remove_prefix(value.size());
+        }
+
+        if (is_url_encoded(key)) {
+            _holder.emplace_front(key.data(), key.size());
+            char *b = &_holder.front()[0];
+            char *e = url_decode(b, key.size());
+            key = std::string_view(b, e - b);
+        }
+
+        if (is_url_encoded(value)) {
+            _holder.emplace_front(value.data(), value.size());
+            char *b = &_holder.front()[0];
+            char *e = url_decode(b, value.size());
+            value = std::string_view(b, e - b);
+        }
+
+        (*this)[key] = value;
+    }
+}
+
+void urlencoded_data::copy_data(urlencoded_data const &rhs)
+{
+    _holder = rhs._holder;
+    std::unordered_set<std::string_view> s(_holder.begin(), _holder.end());
+    for (auto const &p : rhs) {
+        std::string_view key = p.first, value = p.second;
+        auto it = s.find(key);
+        if (it != s.end())
+            key = *it;
+        it = s.find(value);
+        if (it != s.end())
+            value = *it;
+        (*this)[key] = value;
+    }
+}
+
+urlencoded_data::urlencoded_data(urlencoded_data const &rhs)
+{
+    copy_data(rhs);
+}
+
+urlencoded_data & urlencoded_data::operator = (urlencoded_data const &rhs)
+{
+    if (this == &rhs)
+        return *this;
+    clear();
+    copy_data(rhs);
+    return *this;
 }
 
 } // namespace http

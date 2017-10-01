@@ -79,6 +79,11 @@ void load_handlers(char const *pattern, pruv::http::http_loop &loop,
         pruv_log(LOG_ERR, "Can't find handlers. glob returned %s.", code);
     }
 
+    if (!globbuf.gl_pathc) {
+        pruv_log(LOG_INFO, "Not founded paths with handlers.");
+        return;
+    }
+
     for (char **path = globbuf.gl_pathv; *path; ++path) {
         dyn_lib_handle h(dlopen(*path, RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE));
         if (!h.handle) {

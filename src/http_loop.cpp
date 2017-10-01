@@ -126,11 +126,10 @@ int http_loop::do_response_impl() noexcept
                 u.field_data[UF_PATH].off, u.field_data[UF_PATH].len);
 
         _url_query.clear();
-        _url_query_holder.clear();
         if (u.field_set & (1 << UF_QUERY)) {
             std::string_view url_query = url().substr(
                     u.field_data[UF_QUERY].off, u.field_data[UF_QUERY].len);
-            parse_url_query(url_query);
+            _url_query.parse(url_query);
         }
 
         if (u.field_set & (1 << UF_FRAGMENT)) {
@@ -175,37 +174,6 @@ int http_loop::do_response_impl() noexcept
     catch (...) {
         pruv_log(LOG_EMERG, "Unknown error.");
         return EXIT_FAILURE;
-    }
-}
-
-void http_loop::parse_url_query(std::string_view query)
-{
-    while (!query.empty()) {
-        std::string_view key =
-            query.substr(0, query.find_first_of("&="));
-        query.remove_prefix(key.size());
-        std::string_view value(nullptr, 0);
-        if (!query.empty() && query.front() == '=') {
-            query.remove_prefix(1);
-            value = query.substr(0, query.find_first_of('&'));
-            query.remove_prefix(value.size());
-        }
-
-        if (is_url_encoded(key)) {
-            _url_query_holder.emplace_front(key.data(), key.size());
-            char *b = &_url_query_holder.front()[0];
-            char *e = url_decode(b, key.size());
-            key = std::string_view(b, e - b);
-        }
-
-        if (is_url_encoded(value)) {
-            _url_query_holder.emplace_front(value.data(), value.size());
-            char *b = &_url_query_holder.front()[0];
-            char *e = url_decode(b, value.size());
-            value = std::string_view(b, e - b);
-        }
-
-        _url_query[key] = value;
     }
 }
 
