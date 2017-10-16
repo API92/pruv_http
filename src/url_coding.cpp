@@ -89,6 +89,8 @@ void urlencoded_data::parse(std::string_view query)
             value = query.substr(0, query.find_first_of('&'));
             query.remove_prefix(value.size());
         }
+        if (!query.empty())
+            query.remove_prefix(1); // & after key or value
 
         if (is_url_encoded(key)) {
             _holder.emplace_front(key.data(), key.size());
